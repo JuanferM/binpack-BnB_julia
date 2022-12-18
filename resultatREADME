@@ -1,0 +1,5 @@
+For the 'uniform' class, the value for "Number of bins in the current best
+known solution" is the one found by algorithm in the above-referenced
+paper. Except for problems u120_08, u120_19, u250_07, u250_12 and u250_13,
+this is also the smallest number of bins capable of accommodating all the
+items, so the value is the proven optimum.

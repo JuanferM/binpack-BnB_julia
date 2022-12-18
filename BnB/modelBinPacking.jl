@@ -1,41 +1,44 @@
 using JuMP
 
-# Paramètres
-#   solveur  : le solveur choisie pour traiter le problème
-#   instance : une instance du bin packing
-#   P1       : booléen à true si on choisit de résoudre le problème P1
-#       si P1 est à false alors on résout le problème P2
-#   bin      : booléen à true si on résout le problème en variables binaires
-# Valeur de retour
-#   un modèle JuMP du binpacking presque complet
-function modelBinPacking(solveur, instance, bin::Bool = true, P1::Bool = true)
+"""
+    modelBinPacking(solver, instance[, P1, binary])
+
+    Create the bin packing model corresponding to _instance_ using
+    `solver` as the optimizer. When `P1` is true we model against problem P1 (see
+    report for further details), when `P1` is false we model against problem P2.
+    If `binary` is true we consider boolean variables, if `binary` is false we consider
+    free variables.
+
+    # Arguments
+    - `solver`: the solver Optimizer function.
+    - `instance`: the bin packing instance.
+    - **optional** `P1`: true if modeling with P1 (P2 otherwise).
+    - **optional** `binary`: true if modeling with binary variables (free variables otherwise).
+    - **optional** `bound`: upper bound of m. By default, m = n.
+"""
+function modelBinPacking(solver, instance, P1::Bool = true, binary::Bool = false, bound = -1)
     n = length(instance.w)
-    m = n
+    m = (bound == -1) ? n : bound
 
     # Création du model
-    binpacking = Model()
-
-    # Attribution du solveur
-    if !isnothing(solveur)
-        set_optimizer(binpacking, solveur)
-    end
+    model = direct_model((solver)())
 
     # Définition des variables
-    @variable(binpacking, 0 <= x[1:n, 1:m] <= 1, binary=bin)
-    @variable(binpacking, 0 <= y[1:m] <= 1, binary=bin)
+    @variable(model, 0 <= x[1:(n*m)] <= 1, binary=binary)
+    @variable(model, 0 <= y[1:m] <= 1, binary=binary)
 
     # Définition de l'objectif (la somme des yj à minimiser)
-    @objective(binpacking, Min, sum(y[j] for j=1:m))
+    @objective(model, Min, sum(y[j] for j=1:m))
 
     # Définition des contraintes
-    @constraint(binpacking, assign[i=1:n], sum(x[i,j] for j=1:m) == 1)
+    @constraint(model, assign[i=1:n], sum(x[(i-1)*m+j] for j=1:m) == 1)
     if(P1)
-        @constraint(binpacking, capa[j=1:m], sum(x[i,j]*instance.w[i] for i=1:n) <= instance.C * y[j])
+        @constraint(model, capa[j=1:m], sum(x[(i-1)*m+j]*instance.w[i] for i=1:n) <= instance.C * y[j])
     else
         # Rajout de la contrainte additionnelle
-        @constraint(binpacking, capa[j=1:m], sum(x[i,j]*instance.w[i] for i=1:n) <= instance.C)
-        @constraint(binpacking, ranger[i=1:n, j=1:m], x[i, j] <= y[j])
+        @constraint(model, capa[j=1:m], sum(x[(i-1)*m+j]*instance.w[i] for i=1:n) <= instance.C)
+        @constraint(model, ranger[i=1:n, j=1:m], x[(i-1)*m+j] <= y[j])
     end
 
-    return binpacking, x, y
+    return model, x, y
 end

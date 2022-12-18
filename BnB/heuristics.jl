@@ -1,12 +1,21 @@
-# next-fit decreasing
+"""
+    NFD(instance)
+
+    Compute an upper bound of `m` (the number of bins) for the given
+    `instance` using the next-fit decreasing heuristic.
+
+    # Arguments
+    - `instance`: the bin packing instance.
+"""
 function NFD(instance)
-    j::Int64 = 1
+    j::Int64, s::Int64 = 1, 0
     C::Int64 = instance.C
     n::Int64 = length(instance.w)
     ind = sortperm(instance.w, rev=true)
     bins::Vector{Set{Int64}} = [Set{Int64}()]
 
     for i=1:n
+        s += instance.w[i]
         if C - instance.w[ind[i]] >= 0
             push!(bins[j], ind[i])
             C -= instance.w[ind[i]]
@@ -18,18 +27,27 @@ function NFD(instance)
         end
     end
 
-    return bins
+    return length(bins), s, ind
 end
 
-# first-fit decreasing
+"""
+    FFD(instance)
+
+    Compute an upper bound of `m` (the number of bins) for the given
+    `instance` using the first-fit decreasing heuristic.
+
+    # Arguments
+    - `instance`: the bin packing instance.
+"""
 function FFD(instance)
-    j::Int64 = 1
+    j::Int64, s::Int64 = 1, 0
     n::Int64 = length(instance.w)
     ind = sortperm(instance.w, rev=true)
     capa::Vector{Int64} = [instance.C]
     bins::Vector{Set{Int64}} = [Set{Int64}()]
 
     for i=1:n
+        s += instance.w[i]
         stored::Bool = false
         # Trouver un bin avec assez de place
         k = 1
@@ -51,18 +69,27 @@ function FFD(instance)
         end
     end
 
-    return bins
+    return length(bins), s, ind
 end
 
-# best-fit decreasing
+"""
+    BFD(instance)
+
+    Compute an upper bound of `m` (the number of bins) for the given
+    `instance` using the best-fit decreasing heuristic.
+
+    # Arguments
+    - `instance`: the bin packing instance.
+"""
 function BFD(instance)
-    j::Int64 = 1
+    j::Int64, s::Int64 = 1, 0
     n::Int64 = length(instance.w)
     ind = sortperm(instance.w, rev=true)
     capa::Vector{Int64} = [instance.C]
     bins::Vector{Set{Int64}} = [Set{Int64}()]
 
     for i=1:n
+        s += instance.w[i]
         kmin, capamin = -1, typemax(Int64)
         # Trouver un bin avec assez de place
         for k=1:j
@@ -84,5 +111,5 @@ function BFD(instance)
         end
     end
 
-    return bins
+    return length(bins), s, ind
 end
