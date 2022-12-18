@@ -118,19 +118,17 @@ function recBnB(P,
                 for v=0:1
                     # Subproblems
                     coupe = @constraint(P[1], P[1][:x][idx] == v)
-                    R = recBnB(P, instance, s, m, zbar, idxItem+1, ind, cbar, Nf,
-                               depth+1, verbose, idx, v)
+                    R = recBnB(P, instance, s, m, zbar, idxItem+1, ind, cbar,
+                               Nf, depth+1, verbose, idx, v)
                     delete(P[1], coupe)
                     if R[1] != -1 && R[1] < zbar
                         zbar, xbest, ybest = R
                     end
-                    if v == 0
+                    if v == 0 && cbar[bin] - instance.w[ind[item]] >= 0
                         cbar[bin] -= instance.w[ind[item]]
                     end
                 end
 
-                Nf[idx] = true
-                cbar[bin] += instance.w[ind[item]]
                 return zbar, xbest, ybest
             end
         end

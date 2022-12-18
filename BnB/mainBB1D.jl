@@ -26,7 +26,7 @@ function main(fname::String)
     for instance in data
         println(instance.id)
         BnB1(GLPK.Optimizer, instance, BFD, false)
-        # binpacking, x, y = modelBinPacking(GLPK.Optimizer, instance, true, true, BFD(instance)[1])
+        # binpacking, x, y = modelBinPacking(GLPK.Optimizer, instance)
         # println("\nOptimisation...")
         # optimize!(binpacking)
         # println("\nRésultats")
