@@ -26,14 +26,10 @@ function main(fname::String)
 
     for instance in data
         println(instance.id)
-        z, x, y = BnB1(GLPK.Optimizer, instance, BFD, true, 180.0)
-        if x !== nothing
-            println(value.(x))
-            println(length(x))
-            println(value.(y))
-        end
+        z, x, y = BnB1(GLPK.Optimizer, instance, BFD, false, 180.0)
 
-        # binpacking, x, y = modelBinPacking(GLPK.Optimizer, instance, 5, true, true)
+        # m::Int64, _, _ = heuristic(instance)
+        # binpacking, x, y = modelBinPacking(GLPK.Optimizer, instance, m, false, true)
         #
         # println("\nOptimisation...")
         # optimize!(binpacking)
@@ -49,4 +45,4 @@ function main(fname::String)
     return nothing
 end
 
-main("binpack1.txt")
+main("didactic.txt")

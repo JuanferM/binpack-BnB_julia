@@ -1,7 +1,7 @@
 using JuMP
 
 """
-    modelBinPacking(solver, instance[, P1, binary])
+    modelBinPacking(solver, instance[, bound, P1, binary])
 
     Create the bin packing model corresponding to _instance_ using
     `solver` as the optimizer. When `P1` is true we model against problem P1 (see
@@ -17,8 +17,8 @@ using JuMP
     - **optional** `binary`: true if modeling with binary variables (free variables otherwise).
 """
 function modelBinPacking(solver, instance, bound::Int64 = -1, P1::Bool = false, binary::Bool = false)
-    n = length(instance.w)
-    m = (bound == -1) ? n : bound
+    n::Int64 = length(instance.w)
+    m::Int64 = (bound == -1) ? n : bound
 
     # Création du model
     model = direct_model((solver)())

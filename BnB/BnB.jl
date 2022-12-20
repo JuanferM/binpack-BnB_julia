@@ -8,11 +8,13 @@ mutable struct Data
     node_count::Int64
     solution_found::Bool
     solution_count::Int64
+    global_L2::Int64
     start_time::Float64
+    timed_out::Bool
 end
 
 """
-    BnB1(solver, instance, heuristic)
+    BnB1(solver, instance, heuristic[, use_L2, only_free, verbose, timeout])
 
     Branch and Bound (BnB) method entry point. Start BnB method to solve `instance`.
     Use `heuristic` to compute an upper bound of `m` and `solver` to solve each subproblems.
@@ -23,12 +25,16 @@ end
     - `heuristic`: the heuristic used to compute an upper bound of `m` the number of bins.
     - **optional** `verbose` : prints stuff if enabled.
     - **optional** `timeout` : search is stopped if timeout time is exceeded.
+    - **optional** `use_L2` : use L2 bound instead of L1.
+    - **optional** `only_free` : only use the free variables weights to compute L2.
 """
 function BnB1(solver,
               instance,
               heuristic,
               verbose::Bool = false,
-              timeout::Float64 = typemax(Float64))
+              timeout::Float64 = typemax(Float64),
+              use_L2::Bool = true,
+              only_free::Bool = false)
     # Compute upper bound of m with heuristic procedure.
     # Also get indices of instance.w sorted by decreasing value (ind) and
     # sum of elements in instance.w (s)
@@ -40,7 +46,7 @@ function BnB1(solver,
         cbar::Vector{Int64} = fill(instance.C, m)
 
         # Best z value and counter on the number of node explored
-        data::Data = Data(m+0.0, 0, false, 0, time())
+        data::Data = Data(m+0.0, 0, false, 0, -1, time(), false)
 
         # Nf[i] true if x[i] is free, false if x[i] is fixed
         Nf::Vector{Bool} = fill(true, m*n)
@@ -48,11 +54,19 @@ function BnB1(solver,
         # Initial problem : P0 is a tuple (model, x, y)
         P0 = modelBinPacking(solver, instance, m)
 
+        # Compute L2 if necessary (only once if only_free is false)
+        # If only_free is true then L2 is computed at every node and
+        # global_L2 is not used
+        if use_L2 && !only_free
+            data.global_L2 = getL2(instance, m, ind, Nf)
+        end
+
         # Results
         R0 = recBnB(P0, instance, s, m, 0, 0, -1, data, ind,
-                    cbar, Nf, 0, verbose, false, timeout)
-
-        println("\n  Nombre de noeuds explorés : ", data.node_count)
+                    cbar, Nf, 0, verbose, timeout, use_L2, only_free)
+        println("\n")
+        if(data.timed_out) println("  Expiration du temps accordé!") end
+        println("  Nombre de noeuds explorés : ", data.node_count)
         println("  Nombre de solutions réalisables trouvées : ", data.solution_count)
         println("  Meilleure valeur obtenue : z = ", data.z, "\n")
     end
@@ -92,6 +106,79 @@ function checkFeasibility(x, y)
     else return false, nothing, nothing end
 end
 
+"""
+    getL2(instance, m, ind, Nf[, only_free])
+
+    Compute L2 bound.
+
+    # Arguments
+    - `instance`: the bin packing instance.
+    - `m`: bound on m obtained via heuristic algorithm.
+    - `ind`: indices of the items ordered by decreasing weight.
+    - `Nf`: boolean vector. An element of Nf is true if the variable of corresponding index is free.
+    - **optional** `only_free`: take only free variables into account.
+"""
+function getL2(instance,
+               m::Int64,
+               ind::Vector{Int64},
+               Nf::Vector{Bool},
+               only_free::Bool = false)
+    n::Int64 = length(instance.w)
+    L2::Int64, C::Int64 = -1, instance.C
+
+    for α::Int64 = 0:C/2
+        lJ1::Int64, lJ2::Int64, sJ2::Int64, sJ3::Int64 = 0, 0, 0, 0
+
+        for i=1:n
+            compute::Bool, j::Int64 = true, (i-1)*m+1
+            while j <= ((i-1)*m+m) && compute && only_free
+                compute = Nf[j]
+                j += 1
+            end
+
+            if compute
+                if instance.w[ind[i]] > C - α
+                    lJ1 += 1
+                elseif C - α >= instance.w[ind[i]] > C/2
+                    lJ2, sJ2 = lJ2+1, sJ2+instance.w[ind[i]]
+                elseif C/2 >= ind[i] >= α
+                    sJ3 += instance.w[ind[i]]
+                end
+            end
+        end
+
+        L2 = max(L2, lJ1 + lJ2 + max(0, ceil((sJ3 - (lJ2*C - sJ2))/C)))
+    end
+
+    return L2
+end
+
+"""
+    recBnB(P, instance, s, m, item, bin, val, data, ind, cbar, Nf[, depth, verbose, fallback, timeout])
+
+    Branch and Bound (BnB) branching method. Branching is done via recursive calls using the data at
+    hand.
+
+    # Arguments
+    - `P`: the base problem that we'll be adding constraints to.
+    - `instance`: the bin packing instance.
+    - `s`: the sum of the items' weights that aren't in a bin.
+    - `m`: bound on m obtained via heuristic algorithm.
+    - `item`: index of the item to assign to the bin `bin`.
+    - `bin`: index of the bin that `item` is assigned to.
+    - `val`: the value that the variable (m * (item-1) + j) will be receiving.
+    - `data`: holds data such as the value of the best solution, the number of nodes explored, etc.
+    - `ind`: indices of the items ordered by decreasing weight.
+    - `cbar`: residual capacities of the bins.
+    - `Nf`: boolean vector. An element of Nf is true if the variable of corresponding index is free.
+    - **optional** `depth`: depth of the current node.
+    - **optional** `verbose`: prints stuff if enabled.
+    - **optional** `timeout`: If BnB takes more than `timeout` seconds to finish, the search is stopped.
+    - **optional** `use_L2` : use L2 bound instead of L1.
+    - **optional** `only_free` : only use the free variables weights to compute L2.
+    - **optional** `fallback`: An item wasn't able to fit into a bin without infeasibility. `fallback`
+        is true if when that happens so we select that same item to put it into another bin.
+"""
 function recBnB(P,
                 instance,
                 s::Int64,
@@ -105,16 +192,18 @@ function recBnB(P,
                 Nf::Vector{Bool},
                 depth::Int64 = 0,
                 verbose::Bool = false,
-                fallback::Bool = false,
-                timeout::Float64 = typemax(Float64))
-    L1::Int64, idx::Int64, n::Int64 = -1, -1, length(instance.w)
+                timeout::Float64 = typemax(Float64),
+                use_L2::Bool = true,
+                only_free::Bool = false,
+                fallback::Bool = false)
+    L::Int64, idx::Int64, n::Int64 = -1, -1, length(instance.w)
     coupe::Union{ConstraintRef, Nothing}, modified::Bool = nothing, false
 
-    println(time()-data.start_time)
-
     # Reached a leaf or exceeded time so leave.
-    if(item < 0 || item > n || bin < 0 || bin > m
-       || depth > n*m+1 || time()-data.start_time > timeout)
+    if(time()-data.start_time > timeout)
+        data.timed_out = true
+    end
+    if(item < 0 || item > n || bin < 0 || bin > m || depth > n*m+1 || data.timed_out)
         return -1, nothing, nothing
     end
     if(verbose) println("----------- $(depth) -----------") end
@@ -128,7 +217,14 @@ function recBnB(P,
             cbar[bin] -= instance.w[ind[item]]
         end
 
-        L1 = Int64(ceil(s/instance.C)) # Compute L1
+        # Compute bound (L1 or L2 according to use_L2 and only_free)
+        if !use_L2
+            L = Int64(ceil(s/instance.C))
+        elseif use_L2 && !only_free
+            L = data.global_L2
+        else
+            L = getL2(instance, m, ind, Nf, only_free)
+        end
         idx = m * (item-1) + bin # Compute branching variable index
 
         # Add constraints
@@ -137,7 +233,7 @@ function recBnB(P,
 
         if(verbose)
             println("x[$(idx)] = $(val)")
-            println("L1 = $(L1)")
+            println((use_L2 ? "L2" : "L1" ), " = $(L)")
             println("cbar = $(cbar)")
         end
     end
@@ -166,8 +262,8 @@ function recBnB(P,
 
             if z > data.z # Worst than best solution until now
                 if(verbose) println("Noeud sondé (dominance)") end
-            elseif floor(z) < L1 && data.solution_found # Worst than L1 bound
-                if(verbose) println("Noeud sondé (L1)") end
+            elseif floor(z) < L && data.solution_found # Worst than the bound (L1 or L2)
+                if(verbose) println("Noeud sondé (", (use_L2 ? "L2" : "L1"), ")") end
             else
                 # compute branching index and branch
                 i::Int64, j::Int64, mincapa::Int64, capa::Int64 = item+1, 1, typemax(Int64), -1
@@ -188,7 +284,8 @@ function recBnB(P,
                 # Branch and get best results
                 for v=1:-1:0
                     subR = recBnB(P, instance, s, m, newitem, newbin, v, data,
-                                  ind, cbar, Nf, depth+1, verbose, fallback, timeout)
+                                  ind, cbar, Nf, depth+1, verbose, timeout,
+                                  use_L2, only_free, fallback)
                     if subR[1] != -1
                         if(subR[1] < Rz || Rz == -1) Rz, Rx, Ry = subR end
                     else
