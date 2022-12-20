@@ -12,11 +12,11 @@ using JuMP
     # Arguments
     - `solver`: the solver Optimizer function.
     - `instance`: the bin packing instance.
-    - **optional** `P1`: true if modeling with P1 (P2 otherwise).
-    - **optional** `binary`: true if modeling with binary variables (free variables otherwise).
     - **optional** `bound`: upper bound of m. By default, m = n.
+    - **optional** `P1`: true if modeling with P1 (P2 otherwise and by default).
+    - **optional** `binary`: true if modeling with binary variables (free variables otherwise).
 """
-function modelBinPacking(solver, instance, P1::Bool = true, binary::Bool = false, bound = -1)
+function modelBinPacking(solver, instance, bound::Int64 = -1, P1::Bool = false, binary::Bool = false)
     n = length(instance.w)
     m = (bound == -1) ? n : bound
 

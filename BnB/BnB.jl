@@ -7,6 +7,7 @@ mutable struct Data
     z::Float64
     node_count::Int64
     solution_found::Bool
+    solution_count::Int64
 end
 
 """
@@ -33,19 +34,20 @@ function BnB1(solver, instance, heuristic, verbose::Bool = false)
         cbar::Vector{Int64} = fill(instance.C, m)
 
         # Best z value and counter on the number of node explored
-        data::Data = Data(m+0.0, 0, false)
+        data::Data = Data(m+0.0, 0, false, 0)
 
         # Nf[i] true if x[i] is free, false if x[i] is fixed
         Nf::Vector{Bool} = fill(true, m*n)
 
         # Initial problem : P0 is a tuple (model, x, y)
-        P0 = modelBinPacking(solver, instance, false, false, m)
+        P0 = modelBinPacking(solver, instance, m)
 
         # Results
         R0 = recBnB(P0, instance, s, m, 0, 0, -1, data, ind, cbar, Nf, 0, verbose)
 
-        if(verbose) println("\n  Number of nodes explored : ", data.node_count) end
-        println("\n  Meilleure valeur obtenue : z = ", data.z, "\n")
+        println("\n  Nombre de noeuds explorés : ", data.node_count)
+        println("  Nombre de solutions réalisables trouvées : ", data.solution_count)
+        println("  Meilleure valeur obtenue : z = ", data.z, "\n")
     end
 
     println()
@@ -84,19 +86,20 @@ function recBnB(P,
                 cbar::Vector{Int64},
                 Nf::Vector{Bool},
                 depth::Int64 = 0,
-                verbose::Bool = false)
+                verbose::Bool = false,
+                fallback::Bool = false)
     L1::Int64, idx::Int64, n::Int64 = -1, -1, length(instance.w)
     coupe::Union{ConstraintRef, Nothing}, modified::Bool = nothing, false
 
     # Reached a leaf so leave
-    if(item < 0 || item > n || bin < 0 || bin > m || depth > n+1)
+    if(item < 0 || item > n || bin < 0 || bin > m || depth > n*m+1)
         return -1, nothing, nothing
     end
     if(verbose) println("----------- $(depth) -----------") end
 
     # If not first node then modify s and cbar accordingly
     # Also add constraints
-    if !(depth == 0)
+    if depth > 0
         modified = true
         if val == 1
             s -= instance.w[ind[item]]
@@ -130,6 +133,7 @@ function recBnB(P,
         if(verbose) println("z = $(z)") end
         if isint
             if(verbose) println("Noeud sondé (optimalité)") end
+            data.solution_count += 1
             if(z < data.z || !data.solution_found)
                 data.z = z
                 data.solution_found = true
@@ -140,11 +144,12 @@ function recBnB(P,
 
             if z > data.z # Worst than best solution until now
                 if(verbose) println("Noeud sondé (dominance)") end
-            # elseif z < L1 # Worst than L1 bound
+            # elseif ceil(z) < L1 # Worst than L1 bound
             #     if(verbose) println("Noeud sondé (L1)") end
             else
                 # compute branching index and branch
                 i::Int64, j::Int64, mincapa::Int64, capa::Int64 = item+1, 1, typemax(Int64), -1
+                if(fallback) i -= 1; fallback = false end
                 newitem::Int64, newbin::Int64 = -1, -1
                 while i <= n && newitem == -1
                     j = 1
@@ -160,8 +165,12 @@ function recBnB(P,
 
                 # Branch and get best results
                 for v=1:-1:0
-                    subR = recBnB(P, instance, s, m, newitem, newbin, v, data, ind, cbar, Nf, depth+1, verbose)
-                    if((subR[1] != -1 && subR[1] < Rz) || Rz == -1) Rz, Rx, Ry = subR end
+                    subR = recBnB(P, instance, s, m, newitem, newbin, v, data, ind, cbar, Nf, depth+1, verbose, fallback)
+                    if subR[1] != -1
+                        if(subR[1] < Rz || Rz == -1) Rz, Rx, Ry = subR end
+                    else
+                        fallback = true
+                    end
                 end
             end
         end

@@ -5,6 +5,7 @@
 
 using JuMP
 using GLPK
+using MathOptInterface
 
 include("datastrucBB1D.jl")
 include("parserBB1D.jl")
@@ -25,14 +26,15 @@ function main(fname::String)
 
     for instance in data
         println(instance.id)
-        z, x, y = BnB1(GLPK.Optimizer, instance, BFD, true)
-        if x != nothing
+        z, x, y = BnB1(GLPK.Optimizer, instance, BFD)
+        if x !== nothing
             println(value.(x))
             println(length(x))
             println(value.(y))
         end
-        # println("\n\n\nTHE REAL DEAL\n\n\n")
-        # binpacking, x, y = modelBinPacking(GLPK.Optimizer, instance, true, true, 5)
+
+        # binpacking, x, y = modelBinPacking(GLPK.Optimizer, instance, 5, true, true)
+        #
         # println("\nOptimisation...")
         # optimize!(binpacking)
         # println("\nRésultats")
@@ -40,6 +42,8 @@ function main(fname::String)
         # println(value.(x))
         # println(length(x))
         # println(value.(y))
+        #
+        # println(node_count(binpacking))
     end
 
     return nothing
