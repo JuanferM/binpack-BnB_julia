@@ -26,7 +26,7 @@ function main(fname::String)
 
     for instance in data
         println(instance.id)
-        z, x, y = BnB1(GLPK.Optimizer, instance, BFD)
+        z, x, y = BnB1(GLPK.Optimizer, instance, BFD, true, 180.0)
         if x !== nothing
             println(value.(x))
             println(length(x))
@@ -49,4 +49,4 @@ function main(fname::String)
     return nothing
 end
 
-main("didactic.txt")
+main("binpack1.txt")

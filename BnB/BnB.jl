@@ -8,6 +8,7 @@ mutable struct Data
     node_count::Int64
     solution_found::Bool
     solution_count::Int64
+    start_time::Float64
 end
 
 """
@@ -20,9 +21,14 @@ end
     - `solver`: the solver Optimizer function.
     - `instance`: the bin packing instance.
     - `heuristic`: the heuristic used to compute an upper bound of `m` the number of bins.
-    - `verbose` : prints stuff if enabled.
+    - **optional** `verbose` : prints stuff if enabled.
+    - **optional** `timeout` : search is stopped if timeout time is exceeded.
 """
-function BnB1(solver, instance, heuristic, verbose::Bool = false)
+function BnB1(solver,
+              instance,
+              heuristic,
+              verbose::Bool = false,
+              timeout::Float64 = typemax(Float64))
     # Compute upper bound of m with heuristic procedure.
     # Also get indices of instance.w sorted by decreasing value (ind) and
     # sum of elements in instance.w (s)
@@ -34,7 +40,7 @@ function BnB1(solver, instance, heuristic, verbose::Bool = false)
         cbar::Vector{Int64} = fill(instance.C, m)
 
         # Best z value and counter on the number of node explored
-        data::Data = Data(m+0.0, 0, false, 0)
+        data::Data = Data(m+0.0, 0, false, 0, time())
 
         # Nf[i] true if x[i] is free, false if x[i] is fixed
         Nf::Vector{Bool} = fill(true, m*n)
@@ -43,7 +49,8 @@ function BnB1(solver, instance, heuristic, verbose::Bool = false)
         P0 = modelBinPacking(solver, instance, m)
 
         # Results
-        R0 = recBnB(P0, instance, s, m, 0, 0, -1, data, ind, cbar, Nf, 0, verbose)
+        R0 = recBnB(P0, instance, s, m, 0, 0, -1, data, ind,
+                    cbar, Nf, 0, verbose, false, timeout)
 
         println("\n  Nombre de noeuds explorés : ", data.node_count)
         println("  Nombre de solutions réalisables trouvées : ", data.solution_count)
@@ -54,6 +61,17 @@ function BnB1(solver, instance, heuristic, verbose::Bool = false)
     return R0
 end
 
+"""
+    checkFeasibility(x, y)
+
+    Check if x and y are vectors of integers (if every element of x and y is either equal to 0
+    or 1). x and y should be vectors of variable references (VariableRef). Because of that, we
+    also create two vectors of floats while doing the checking that we return if x and y are true.
+
+    # Arguments
+    - `x`: the Vector{VariableRef} representing x.
+    - `y`: the Vector{VariableRef} representing y.
+"""
 function checkFeasibility(x, y)
     if(x === nothing || y === nothing) return false, x, y end
     lx::Int64, ly::Int64 = length(x), length(y)
@@ -87,12 +105,16 @@ function recBnB(P,
                 Nf::Vector{Bool},
                 depth::Int64 = 0,
                 verbose::Bool = false,
-                fallback::Bool = false)
+                fallback::Bool = false,
+                timeout::Float64 = typemax(Float64))
     L1::Int64, idx::Int64, n::Int64 = -1, -1, length(instance.w)
     coupe::Union{ConstraintRef, Nothing}, modified::Bool = nothing, false
 
-    # Reached a leaf so leave
-    if(item < 0 || item > n || bin < 0 || bin > m || depth > n*m+1)
+    println(time()-data.start_time)
+
+    # Reached a leaf or exceeded time so leave.
+    if(item < 0 || item > n || bin < 0 || bin > m
+       || depth > n*m+1 || time()-data.start_time > timeout)
         return -1, nothing, nothing
     end
     if(verbose) println("----------- $(depth) -----------") end
@@ -144,8 +166,8 @@ function recBnB(P,
 
             if z > data.z # Worst than best solution until now
                 if(verbose) println("Noeud sondé (dominance)") end
-            # elseif ceil(z) < L1 # Worst than L1 bound
-            #     if(verbose) println("Noeud sondé (L1)") end
+            elseif floor(z) < L1 && data.solution_found # Worst than L1 bound
+                if(verbose) println("Noeud sondé (L1)") end
             else
                 # compute branching index and branch
                 i::Int64, j::Int64, mincapa::Int64, capa::Int64 = item+1, 1, typemax(Int64), -1
@@ -165,7 +187,8 @@ function recBnB(P,
 
                 # Branch and get best results
                 for v=1:-1:0
-                    subR = recBnB(P, instance, s, m, newitem, newbin, v, data, ind, cbar, Nf, depth+1, verbose, fallback)
+                    subR = recBnB(P, instance, s, m, newitem, newbin, v, data,
+                                  ind, cbar, Nf, depth+1, verbose, fallback, timeout)
                     if subR[1] != -1
                         if(subR[1] < Rz || Rz == -1) Rz, Rx, Ry = subR end
                     else
