@@ -1,7 +1,0 @@
-  0.004243 seconds (1.59 k allocations: 95.970 KiB, 99.40% compilation time)
- didactique 
-
-  Meilleure valeur obtenue : z = 5
-
-  1.992766 seconds (180.51 k allocations: 8.557 MiB, 99.28% compilation time)
-

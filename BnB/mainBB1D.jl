@@ -26,10 +26,9 @@ function main(fname::String)
 
     for instance in data
         println(instance.id)
-        # z, x, y = BnB1(GLPK.Optimizer, instance, BFD, false, 45.0)
+        z, x, y = BnB1(GLPK.Optimizer, instance, BFD, true, 45.0)
 
-        @time m::Int64, _, _ = BFD(instance)
-        println(m, "\n")
+        # m::Int64, _, _ = BFD(instance)
         # binpacking, x, y = modelBinPacking(GLPK.Optimizer, instance, m, false, true)
         # set_time_limit_sec(binpacking, 45.0)
         #
@@ -37,11 +36,10 @@ function main(fname::String)
         # optimize!(binpacking)
         # println("\nRésultats")
         # println(solution_summary(binpacking))
-        #
         # println(node_count(binpacking))
     end
 
     return nothing
 end
 
-main("binpack1.txt")
+main("etude.txt")
