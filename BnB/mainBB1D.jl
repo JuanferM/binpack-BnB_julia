@@ -26,7 +26,7 @@ function main(fname::String)
 
     for instance in data
         println(instance.id)
-        z, x, y = BnB1(GLPK.Optimizer, instance, BFD, true, 45.0)
+        z, x, y = BnB1(GLPK.Optimizer, instance, BFD, false, 45.0)
 
         # m::Int64, _, _ = BFD(instance)
         # binpacking, x, y = modelBinPacking(GLPK.Optimizer, instance, m, false, true)
@@ -42,4 +42,4 @@ function main(fname::String)
     return nothing
 end
 
-main("etude.txt")
+main("N1C1W1.txt")

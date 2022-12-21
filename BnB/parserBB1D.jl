@@ -26,6 +26,7 @@ function loadBB1D(nomFichier::String)
 
 		# identificateur de l'instance
 		id = readline(f)
+
 		# capacite du bin, nbr d'objets, best sol (info non conservee)
 		C, n, zBest = parse.(Int64,split(readline(f)))
 		# allocation memoire de l'instance
