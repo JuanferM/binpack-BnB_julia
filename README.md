@@ -7,12 +7,12 @@ of the bin packing problem considered in E. Falkenauer (1994) "A Hybrid Grouping
 Bin Packing". This data file is binpack1 and was contributed by E. Falkenauer.
 
 The format of this data file is as follows:
-Number of test problems (P)
-For each test problem (p=1,...,P) in turn:
-   Problem identifier
-   Bin capacity, Number of items (n), Number of bins in the current
+- Number of test problems (P)  
+- For each test problem (p=1,...,P) in turn:  
+   * Problem identifier
+   * Bin capacity, Number of items (n), Number of bins in the current
                                       best known solution
-   For each item i (i=1,...,n): size of the item
+   * For each item i (i=1,...,n): size of the item
    
 There also instances  used by A. Scholl, R. Klein, and C. Jürgens in Bison: a fast hybrid procedure 
 for exactly solving the one-dimensional bin packing problem. Those instances were compiled into data
