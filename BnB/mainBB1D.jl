@@ -26,16 +26,18 @@ function main(fname::String)
 
     for instance in data
         println(instance.id)
-        z, x, y = BnB1(GLPK.Optimizer, instance, BFD, false, 45.0)
+        # z, x, y = BnB1(GLPK.Optimizer, instance, BFD, false, 45.0)
 
-        # m::Int64, _, _ = BFD(instance)
-        # binpacking, x, y = modelBinPacking(GLPK.Optimizer, instance, m, false, true)
-        # set_time_limit_sec(binpacking, 45.0)
-        #
-        # println("\nOptimisation...")
-        # optimize!(binpacking)
-        # println("\nRésultats")
-        # println(solution_summary(binpacking))
+        m::Int64, _, _ = BFD(instance)
+        binpacking, x, y = modelBinPacking(GLPK.Optimizer, instance, m, false, false)
+        set_time_limit_sec(binpacking, 45.0)
+
+        println("\nOptimisation...")
+        optimize!(binpacking)
+        println("\nRésultats")
+        println(solution_summary(binpacking))
+        println(value.(x))
+        println('\n', value.(y))
         # println(node_count(binpacking))
     end
 
