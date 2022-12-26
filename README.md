@@ -19,8 +19,8 @@ for exactly solving the one-dimensional bin packing problem. Those instances wer
 files in the same format as the data files considered by E. Falkenauer. Basically, all instances with
 the same characteristics were put into single data files (e.g. N1C1W1_A, N1C1W1_B, ... N1C1W1_T were put
 into the data file N1C1W1). The instances chosen are all from the set 'Scholl 1', a set of 720,
-uniformly distributed instances with n between 50 and 500. The capacity c is between 100 and 150 (set ‘Scholl 1’).
-The names of the data files are self-explanatory : Nx is the number of items (we have N1 = 50, N2 = 100, n3 = 120),
+uniformly distributed instances with n between 50 and 500. The capacity C is between 100 and 150 (set ‘Scholl 1’).
+The names of the data files are self-explanatory : Nx is the number of items (we have N1 = 50, N2 = 100, N3 = 120),
 Cx is the capacity of the bins (C1 = 100, C2 = 120, C3 = 150), etc.
    
    
