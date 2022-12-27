@@ -2,9 +2,9 @@
 Branch-and-bound algorithm and heuristics for the 1D bin packing problem in Julia.
 
 The branch-and-bound algorithm (`BnB.jl`) follows the guidelines of Eilon and Christofides (1971) with
-the addition of the L2 bound presented by Marthelo and Toth. The algorithm was tested on one instance 
-of the bin packing problem considered in E. Falkenauer (1994) "A Hybrid Grouping Genetic Algorithm for
-Bin Packing". This data file is binpack1 and was contributed by E. Falkenauer.
+the addition of the L2 bound presented by Marthelo and Toth and minimal cover cuts. The algorithm was 
+tested on one instance of the bin packing problem considered in E. Falkenauer (1994) "A Hybrid Grouping
+Genetic Algorithm for Bin Packing". This data file is binpack1 and was contributed by E. Falkenauer.
 
 The format of this data file is as follows:
 - Number of test problems (P)  
