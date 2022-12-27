@@ -27,14 +27,16 @@ end
     - **optional** `timeout` : search is stopped if timeout time is exceeded.
     - **optional** `use_L2` : use L2 bound instead of L1.
     - **optional** `only_free` : only use the free variables weights to compute L2.
+    - **optional** `use_cut` : use minimal cover cuts
 """
-function BnB1(solver,
-              instance,
-              heuristic,
-              verbose::Bool = false,
-              timeout::Float64 = typemax(Float64),
-              use_L2::Bool = true,
-              only_free::Bool = false)
+function BnB(solver,
+             instance,
+             heuristic,
+             verbose::Bool = false,
+             timeout::Float64 = typemax(Float64),
+             use_L2::Bool = true,
+             only_free::Bool = false,
+             use_cut::Bool = true)
     # Compute upper bound of m with heuristic procedure.
     # Also get indices of instance.w sorted by decreasing value (ind) and
     # sum of elements in instance.w (s)
@@ -62,8 +64,8 @@ function BnB1(solver,
         end
 
         # Results
-        R0 = recBnB(P0, instance, s, m, 0, 0, -1, data, ind,
-                    cbar, Nf, 0, verbose, timeout, use_L2, only_free)
+        R0 = recBnB(P0, instance, s, m, 0, 0, -1, data, ind, cbar,
+                    Nf, 0, verbose, timeout, use_L2, only_free, use_cut)
         println("\n")
         if(data.timed_out) println("  Expiration du temps accordé!") end
         println("  Nombre de noeuds explorés : ", data.node_count)
@@ -176,6 +178,7 @@ end
     - **optional** `timeout`: If BnB takes more than `timeout` seconds to finish, the search is stopped.
     - **optional** `use_L2` : use L2 bound instead of L1.
     - **optional** `only_free` : only use the free variables weights to compute L2.
+    - **optional** `use_cut` : use minimal cover cuts
     - **optional** `fallback`: An item wasn't able to fit into a bin without infeasibility. `fallback`
         is true if when that happens so we select that same item to put it into another bin.
 """
@@ -195,9 +198,10 @@ function recBnB(P,
                 timeout::Float64 = typemax(Float64),
                 use_L2::Bool = true,
                 only_free::Bool = false,
+                use_cut::Bool = true,
                 fallback::Bool = false)
-    L::Int64, idx::Int64, n::Int64 = -1, -1, length(instance.w)
-    coupe::Union{ConstraintRef, Nothing}, modified::Bool = nothing, false
+    L::Int64, index::Int64, n::Int64 = -1, -1, length(instance.w)
+    cont::Union{ConstraintRef, Nothing}, modified::Bool = nothing, false
 
     # Reached a leaf or exceeded time so leave.
     if(time()-data.start_time > timeout)
@@ -225,14 +229,14 @@ function recBnB(P,
         else
             L = getL2(instance, m, ind, Nf, only_free)
         end
-        idx = m * (item-1) + bin # Compute branching variable index
+        index = m * (item-1) + bin # Compute branching variable index
 
         # Add constraints
-        Nf[idx] = false
-        coupe = @constraint(P[1], P[1][:x][idx] == val)
+        Nf[index] = false
+        cont = @constraint(P[1], P[1][:x][index] == val)
 
         if(verbose)
-            println("x[$(idx)] = $(val)")
+            println("x[$(index)] = $(val)")
             println((use_L2 ? "L2" : "L1" ), " = $(L)")
             println("cbar = $(cbar)")
         end
@@ -265,8 +269,32 @@ function recBnB(P,
             elseif floor(z) < L && data.solution_found # Worst than the bound (L1 or L2)
                 if(verbose) println("Noeud sondé (", (use_L2 ? "L2" : "L1"), ")") end
             else
+                # compute cuts
+                cuts::Vector{ConstraintRef} = []
+                if use_cut
+                    for j=1:m # compute minimal cover
+                        i::Int64, s::Int64= 1, 0
+                        cover::Vector{VariableRef}, cvi::Vector{Int64} = [], []
+                        while i <= n && s <= instance.C
+                            idx::Int64 = m * (ind[i]-1) + j
+                            if !Nf[idx] # Item is in bin
+                                s += instance.w[ind[i]]
+                                push!(cover, P[1][:x][idx])
+                                push!(cvi, ind[i])
+                            end
+                            i += 1
+                        end
+
+                        if length(cover) != 0 # if we have a cover
+                            # add the cut to the problem
+                            cut::ConstraintRef = @constraint(P[1], sum(cover) <= length(cover)-1)
+                            push!(cuts, cut) # add the cut to the list
+                        end
+                    end
+                end
+
                 # compute branching index and branch
-                i::Int64, j::Int64, mincapa::Int64, capa::Int64 = item+1, 1, typemax(Int64), -1
+                i, j::Int64, mincapa::Int64, capa::Int64 = item+1, 1, typemax(Int64), -1
                 if(fallback) i -= 1; fallback = false end
                 newitem::Int64, newbin::Int64 = -1, -1
                 while i <= n && newitem == -1
@@ -292,6 +320,11 @@ function recBnB(P,
                         fallback = true
                     end
                 end
+
+                # Remove cover cuts from the problem
+                for cut in cuts
+                    delete(P[1], cut)
+                end
             end
         end
     else
@@ -307,8 +340,8 @@ function recBnB(P,
         end
 
         # remove constraints
-        Nf[idx] = true
-        if(coupe !== nothing) delete(P[1], coupe) end
+        Nf[index] = true
+        if(cont !== nothing) delete(P[1], cont) end
     end
 
     # Return results

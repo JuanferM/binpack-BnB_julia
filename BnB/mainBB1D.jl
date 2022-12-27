@@ -26,19 +26,19 @@ function main(fname::String)
 
     for instance in data
         println(instance.id)
-        # z, x, y = BnB1(GLPK.Optimizer, instance, BFD, false, 45.0)
+        # Use BnB with GLPK on instance with BFD heuristic.
+        # Verbose disabled. Timeout at 45 seconds.
+        # By default, we use L2 and minimal cover cuts.
+        z, x, y = BnB(GLPK.Optimizer, instance, BFD, false, 45.0)
 
-        m::Int64, _, _ = BFD(instance)
-        binpacking, x, y = modelBinPacking(GLPK.Optimizer, instance, m, false, false)
-        set_time_limit_sec(binpacking, 45.0)
-
-        println("\nOptimisation...")
-        optimize!(binpacking)
-        println("\nRésultats")
-        println(solution_summary(binpacking))
-        println(value.(x))
-        println('\n', value.(y))
-        # println(node_count(binpacking))
+        # m::Int64, _, _ = FFD(instance)
+        # binpacking, x, y = modelBinPacking(GLPK.Optimizer, instance, m, false, false)
+        # set_time_limit_sec(binpacking, 45.0)
+        #
+        # println("\nOptimisation...")
+        # optimize!(binpacking)
+        # println("\nRésultats")
+        # println(solution_summary(binpacking))
     end
 
     return nothing
