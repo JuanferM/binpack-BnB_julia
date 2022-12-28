@@ -274,13 +274,12 @@ function recBnB(P,
                 if use_cut
                     for j=1:m # compute minimal cover
                         i::Int64, s::Int64= 1, 0
-                        cover::Vector{VariableRef}, cvi::Vector{Int64} = [], []
+                        cover::Vector{VariableRef} = []
                         while i <= n && s <= instance.C
                             idx::Int64 = m * (ind[i]-1) + j
                             if !Nf[idx] # Item is in bin
                                 s += instance.w[ind[i]]
                                 push!(cover, P[1][:x][idx])
-                                push!(cvi, ind[i])
                             end
                             i += 1
                         end
