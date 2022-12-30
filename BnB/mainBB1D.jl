@@ -5,6 +5,7 @@
 
 using JuMP
 using GLPK
+using Gurobi
 using MathOptInterface
 
 include("datastrucBB1D.jl")
@@ -29,7 +30,8 @@ function main(fname::String)
         # Use BnB with GLPK on instance with BFD heuristic.
         # Verbose disabled. Timeout at 45 seconds.
         # By default, we use L2 and minimal cover cuts.
-        z, x, y = BnB(GLPK.Optimizer, instance, BFD, false, 45.0)
+        # z, x, y = BnB(GLPK.Optimizer, instance, BFD, false, 45.0)
+        z, x, y = BnB(Gurobi.Optimizer, instance, BFD, false, 45.0)
 
         # m::Int64, _, _ = FFD(instance)
         # binpacking, x, y = modelBinPacking(GLPK.Optimizer, instance, m, false, false)

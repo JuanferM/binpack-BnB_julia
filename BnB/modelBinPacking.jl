@@ -22,6 +22,9 @@ function modelBinPacking(solver, instance, bound::Int64 = -1, P1::Bool = false, 
 
     # Création du model
     model = direct_model((solver)())
+    if solver == Gurobi.Optimizer
+    	set_optimizer_attribute(model, "OutputFlag", 0)
+    end
 
     # Définition des variables
     @variable(model, 0 <= x[1:(n*m)] <= 1, binary=binary)
