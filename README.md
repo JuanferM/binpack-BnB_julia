@@ -14,7 +14,7 @@ The format of this data file is as follows:
                                       best known solution
    * For each item i (i=1,...,n): size of the item
    
-There also instances  used by A. Scholl, R. Klein, and C. Jürgens in Bison: a fast hybrid procedure 
+There are also instances  used by A. Scholl, R. Klein, and C. Jürgens in Bison: a fast hybrid procedure 
 for exactly solving the one-dimensional bin packing problem. Those instances were compiled into data
 files in the same format as the data files considered by E. Falkenauer. Basically, all instances with
 the same characteristics were put into single data files (e.g. N1C1W1_A, N1C1W1_B, ... N1C1W1_T were put
